@@ -26,7 +26,7 @@ str_module.markdown(
 )
 
 
-# 3. المخزن المشترك للرسائل النصية والصور
+# 3. المخزن المشترك للرسائل النصية
 @str_module.cache_resource
 def get_global_messages():
   return []
@@ -34,7 +34,7 @@ def get_global_messages():
 
 all_msgs = get_global_messages()
 
-# --- تسجيل الدخول بالاسم فقط ---
+# --- تسجيل الدخول بالاسم فقط (بدون باسورد) ---
 if "my_name" not in str_module.session_state:
   str_module.title("✨ أهلاً بيج بالچات الملكي")
   name_input = str_module.text_input("اسمج هنا:")
@@ -44,23 +44,21 @@ if "my_name" not in str_module.session_state:
       str_module.rerun()
   str_module.stop()
 
-# --- القائمة الجانبية (مع خاصية رفع الصور) ---
-str_module.sidebar.title("الملكة ريمي 👑")
+# --- القائمة الجانبية ---
+str_module.sidebar.title("الملكة ريمي")
 str_module.sidebar.divider()
 
-# 🖼️ إضافة أداة إرسال الصور
-uploaded_img = str_module.sidebar.file_uploader(
-    "إرسال صورة 🖼️", type=["jpg", "jpeg", "png"]
+# 📸 أيقونة وأداة إرسال الصور (إضافة فقط)
+img_file = str_module.sidebar.file_uploader(
+    "📷 اختيار صورة", type=["png", "jpg", "jpeg"], label_visibility="visible"
 )
-
-if uploaded_img is not None:
-  if str_module.sidebar.button("إرسال الصورة 📤"):
-    img_bytes = uploaded_img.read()
+if img_file is not None:
+  if str_module.sidebar.button("إرسال الصورة 🖼️"):
     now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
     all_msgs.append({
         "name": str_module.session_state.my_name,
         "msg": None,
-        "img": img_bytes,
+        "img": img_file.read(),
         "time": now,
         "seen": False,
     })
@@ -71,7 +69,6 @@ str_module.sidebar.divider()
 if str_module.sidebar.button("حذف الكل 🗑️"):
   all_msgs.clear()
   str_module.rerun()
-
 if str_module.sidebar.button("خروج ⬅️"):
   del str_module.session_state.my_name
   str_module.rerun()
@@ -86,15 +83,10 @@ for i, chat in enumerate(all_msgs):
 
   with col_msg:
     with str_module.chat_message("user"):
-      # عرض الاسم أولاً
-      str_module.write(f"**{chat['name']}:**")
-
-      # عرض النص إذا وجد
       if chat.get("msg"):
-        str_module.write(chat["msg"])
-
-      # عرض الصورة إذا وجدت
-      if chat.get("img"):
+        str_module.write(f"**{chat['name']}:** {chat['msg']}")
+      elif chat.get("img"):
+        str_module.write(f"**{chat['name']}:**")
         str_module.image(chat["img"], use_container_width=True)
 
       t, s = chat.get("time", ""), ("v v" if chat.get("seen", False) else "v")
@@ -113,14 +105,13 @@ for i, chat in enumerate(all_msgs):
         if str_module.button("🗑️", key=f"del_{i}"):
           all_msgs.pop(i)
           str_module.rerun()
-        # التعديل يظهر فقط إذا كانت الرسالة نصية
         if chat.get("msg") and str_module.button("✏️", key=f"ed_{i}"):
           str_module.session_state.edit_idx = i
           str_module.session_state.edit_val = chat["msg"]
           str_module.session_state[f"opt_{i}"] = False
           str_module.rerun()
 
-# --- واجهة التعديل للنصوص ---
+# --- واجهة التعديل ---
 if "edit_idx" in str_module.session_state:
   str_module.divider()
   new_txt = str_module.text_input(
