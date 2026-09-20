@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, timedelta
 import streamlit as str_module
 from streamlit_autorefresh import st_autorefresh
@@ -6,7 +7,7 @@ from streamlit_autorefresh import st_autorefresh
 str_module.set_page_config(page_title="The Queen Remy 👑", page_icon="✨")
 st_autorefresh(interval=1000, key="datarefresh")
 
-# 2. التنسيقات (خلفية هادئة وبدون فيونكات)
+# 2. التنسيقات (خلفية هادئة وتنسيق عرض الصور بالجودة الكاملة)
 str_module.markdown(
     """
     <style>
@@ -15,6 +16,15 @@ str_module.markdown(
         background-size: cover;
     }
     .stChatMessage { background-color: rgba(255, 255, 255, 0.9) !important; border-radius: 15px; }
+    
+    /* عرض الصورة بكامل دقتها ووضوحها وبدون ضغط */
+    .hq-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 10px;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
     
     .chat-info { color: #888888 !important; font-size: 8px !important; float: right; margin-top: 5px; font-family: sans-serif; }
     .status-icon { color: #888888 !important; margin-left: 2px; font-size: 9px !important; }
@@ -34,7 +44,7 @@ def get_global_messages():
 
 all_msgs = get_global_messages()
 
-# --- تسجيل الدخول بالاسم فقط (بدون باسورد) ---
+# --- تسجيل الدخول بالاسم فقط ---
 if "my_name" not in str_module.session_state:
     str_module.title("✨ أهلاً بيج بالچات الملكي")
     name_input = str_module.text_input("اسمج هنا:")
@@ -48,22 +58,27 @@ if "my_name" not in str_module.session_state:
 str_module.sidebar.title("الملكة ريمي")
 str_module.sidebar.divider()
 
-# 📸 أداة إرسال أي ملف (بدون تقييد بالأنواع type)
+# 📁 أداة إرسال أي ملف أو صورة بجودة عالية بدون قيود
 uploaded_file = str_module.sidebar.file_uploader(
     "📁 اختيار ملف (أي نوع)", label_visibility="visible"
 )
 if uploaded_file is not None:
     if str_module.sidebar.button("إرسال الملف 📤"):
         now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
-        
-        # التمييز إذا كان الملف صورة أو نوع آخر
-        is_image = uploaded_file.type.startswith("image/") if uploaded_file.type else False
-        
+
+        # التمييز إذا كان الملف صورة أو ملف عادي
+        is_image = (
+            uploaded_file.type.startswith("image/")
+            if uploaded_file.type
+            else False
+        )
+
         all_msgs.append({
             "name": str_module.session_state.my_name,
             "msg": None,
             "file": uploaded_file.read(),
             "file_name": uploaded_file.name,
+            "mime_type": uploaded_file.type or "application/octet-stream",
             "is_img": is_image,
             "time": now,
             "seen": False,
@@ -81,7 +96,7 @@ if str_module.sidebar.button("خروج ⬅️"):
 
 str_module.title("Remy Chat ✨")
 
-# --- عرض المحادثة (نصوص، صور، وملفات متنوعة) ---
+# --- عرض المحادثة ---
 for i, chat in enumerate(all_msgs):
     if chat["name"] != str_module.session_state.my_name:
         chat["seen"] = True
@@ -93,18 +108,25 @@ for i, chat in enumerate(all_msgs):
                 str_module.write(f"**{chat['name']}:** {chat['msg']}")
             elif chat.get("file"):
                 str_module.write(f"**{chat['name']}:**")
+
                 if chat.get("is_img"):
-                    str_module.image(chat["file"])
+                    # عرض الصورة بدقتها الخام العالية عبر Base64 بدون ضغط Streamlit
+                    b64_data = base64.b64encode(chat["file"]).decode("utf-8")
+                    mime = chat.get("mime_type", "image/png")
+                    img_html = f'<img src="data:{mime};base64,{b64_data}" class="hq-image" />'
+                    str_module.markdown(img_html, unsafe_allow_html=True)
                 else:
                     # زر لتنزيل الملفات غير الصور
                     str_module.download_button(
                         label=f"📎 تحميل الملف: {chat.get('file_name', 'ملف')}",
                         data=chat["file"],
                         file_name=chat.get("file_name", "file"),
-                        key=f"dl_{i}"
+                        key=f"dl_{i}",
                     )
 
-            t, s = chat.get("time", ""), ("v v" if chat.get("seen", False) else "v")
+            t, s = chat.get("time", ""), (
+                "v v" if chat.get("seen", False) else "v"
+            )
             str_module.markdown(
                 f'<div class="chat-info">{t} <span class="status-icon">{s}</span></div>',
                 unsafe_allow_html=True,
@@ -113,8 +135,8 @@ for i, chat in enumerate(all_msgs):
     if chat["name"] == str_module.session_state.my_name:
         with col_options:
             if str_module.button("⋮", key=f"menu_{i}"):
-                str_module.session_state[f"opt_{i}"] = not str_module.session_state.get(
-                    f"opt_{i}", False
+                str_module.session_state[f"opt_{i}"] = (
+                    not str_module.session_state.get(f"opt_{i}", False)
                 )
             if str_module.session_state.get(f"opt_{i}", False):
                 if str_module.button("🗑️", key=f"del_{i}"):
