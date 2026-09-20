@@ -26,7 +26,7 @@ str_module.markdown(
 )
 
 
-# 3. المخزن المشترك للرسائل النصية
+# 3. المخزن المشترك للرسائل النصية والملفات
 @str_module.cache_resource
 def get_global_messages():
     return []
@@ -48,17 +48,23 @@ if "my_name" not in str_module.session_state:
 str_module.sidebar.title("الملكة ريمي")
 str_module.sidebar.divider()
 
-# 📸 أيقونة وأداة إرسال الصور (إضافة فقط)
-img_file = str_module.sidebar.file_uploader(
-    "📷 اختيار صورة", type=["png", "jpg", "jpeg"], label_visibility="visible"
+# 📸 أداة إرسال أي ملف (بدون تقييد بالأنواع type)
+uploaded_file = str_module.sidebar.file_uploader(
+    "📁 اختيار ملف (أي نوع)", label_visibility="visible"
 )
-if img_file is not None:
-    if str_module.sidebar.button("إرسال الصورة 🖼️"):
+if uploaded_file is not None:
+    if str_module.sidebar.button("إرسال الملف 📤"):
         now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
+        
+        # التمييز إذا كان الملف صورة أو نوع آخر
+        is_image = uploaded_file.type.startswith("image/") if uploaded_file.type else False
+        
         all_msgs.append({
             "name": str_module.session_state.my_name,
             "msg": None,
-            "img": img_file.read(),
+            "file": uploaded_file.read(),
+            "file_name": uploaded_file.name,
+            "is_img": is_image,
             "time": now,
             "seen": False,
         })
@@ -75,7 +81,7 @@ if str_module.sidebar.button("خروج ⬅️"):
 
 str_module.title("Remy Chat ✨")
 
-# --- عرض المحادثة (نصوص وصور) ---
+# --- عرض المحادثة (نصوص، صور، وملفات متنوعة) ---
 for i, chat in enumerate(all_msgs):
     if chat["name"] != str_module.session_state.my_name:
         chat["seen"] = True
@@ -85,9 +91,18 @@ for i, chat in enumerate(all_msgs):
         with str_module.chat_message("user"):
             if chat.get("msg"):
                 str_module.write(f"**{chat['name']}:** {chat['msg']}")
-            elif chat.get("img"):
+            elif chat.get("file"):
                 str_module.write(f"**{chat['name']}:**")
-                str_module.image(chat["img"])
+                if chat.get("is_img"):
+                    str_module.image(chat["file"])
+                else:
+                    # زر لتنزيل الملفات غير الصور
+                    str_module.download_button(
+                        label=f"📎 تحميل الملف: {chat.get('file_name', 'ملف')}",
+                        data=chat["file"],
+                        file_name=chat.get("file_name", "file"),
+                        key=f"dl_{i}"
+                    )
 
             t, s = chat.get("time", ""), ("v v" if chat.get("seen", False) else "v")
             str_module.markdown(
@@ -128,7 +143,7 @@ if prompt := str_module.chat_input("اكتبي رسالتج هنا..."):
     all_msgs.append({
         "name": str_module.session_state.my_name,
         "msg": prompt,
-        "img": None,
+        "file": None,
         "time": now,
         "seen": False,
     })
