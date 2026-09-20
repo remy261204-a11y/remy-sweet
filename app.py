@@ -29,20 +29,20 @@ str_module.markdown(
 # 3. المخزن المشترك للرسائل النصية
 @str_module.cache_resource
 def get_global_messages():
-  return []
+    return []
 
 
 all_msgs = get_global_messages()
 
 # --- تسجيل الدخول بالاسم فقط (بدون باسورد) ---
 if "my_name" not in str_module.session_state:
-  str_module.title("✨ أهلاً بيج بالچات الملكي")
-  name_input = str_module.text_input("اسمج هنا:")
-  if str_module.button("دخول"):
-    if name_input:
-      str_module.session_state.my_name = name_input
-      str_module.rerun()
-  str_module.stop()
+    str_module.title("✨ أهلاً بيج بالچات الملكي")
+    name_input = str_module.text_input("اسمج هنا:")
+    if str_module.button("دخول"):
+        if name_input:
+            str_module.session_state.my_name = name_input
+            str_module.rerun()
+    str_module.stop()
 
 # --- القائمة الجانبية ---
 str_module.sidebar.title("الملكة ريمي")
@@ -53,83 +53,83 @@ img_file = str_module.sidebar.file_uploader(
     "📷 اختيار صورة", type=["png", "jpg", "jpeg"], label_visibility="visible"
 )
 if img_file is not None:
-  if str_module.sidebar.button("إرسال الصورة 🖼️"):
-    now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
-    all_msgs.append({
-        "name": str_module.session_state.my_name,
-        "msg": None,
-        "img": img_file.read(),
-        "time": now,
-        "seen": False,
-    })
-    str_module.rerun()
+    if str_module.sidebar.button("إرسال الصورة 🖼️"):
+        now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
+        all_msgs.append({
+            "name": str_module.session_state.my_name,
+            "msg": None,
+            "img": img_file.read(),
+            "time": now,
+            "seen": False,
+        })
+        str_module.rerun()
 
 str_module.sidebar.divider()
 
 if str_module.sidebar.button("حذف الكل 🗑️"):
-  all_msgs.clear()
-  str_module.rerun()
+    all_msgs.clear()
+    str_module.rerun()
 if str_module.sidebar.button("خروج ⬅️"):
-  del str_module.session_state.my_name
-  str_module.rerun()
+    del str_module.session_state.my_name
+    str_module.rerun()
 
 str_module.title("Remy Chat ✨")
 
 # --- عرض المحادثة (نصوص وصور) ---
 for i, chat in enumerate(all_msgs):
-  if chat["name"] != str_module.session_state.my_name:
-    chat["seen"] = True
-  col_msg, col_options = str_module.columns([0.85, 0.15])
+    if chat["name"] != str_module.session_state.my_name:
+        chat["seen"] = True
+    col_msg, col_options = str_module.columns([0.85, 0.15])
 
-  with col_msg:
-    with str_module.chat_message("user"):
-      if chat.get("msg"):
-        str_module.write(f"**{chat['name']}:** {chat['msg']}")
-      elif chat.get("img"):
-        str_module.write(f"**{chat['name']}:**")
-        str_module.image(chat["img"], use_container_width=True)
+    with col_msg:
+        with str_module.chat_message("user"):
+            if chat.get("msg"):
+                str_module.write(f"**{chat['name']}:** {chat['msg']}")
+            elif chat.get("img"):
+                str_module.write(f"**{chat['name']}:**")
+                str_module.image(chat["img"])
 
-      t, s = chat.get("time", ""), ("v v" if chat.get("seen", False) else "v")
-      str_module.markdown(
-          f'<div class="chat-info">{t} <span class="status-icon">{s}</span></div>',
-          unsafe_allow_html=True,
-      )
+            t, s = chat.get("time", ""), ("v v" if chat.get("seen", False) else "v")
+            str_module.markdown(
+                f'<div class="chat-info">{t} <span class="status-icon">{s}</span></div>',
+                unsafe_allow_html=True,
+            )
 
-  if chat["name"] == str_module.session_state.my_name:
-    with col_options:
-      if str_module.button("⋮", key=f"menu_{i}"):
-        str_module.session_state[f"opt_{i}"] = not str_module.session_state.get(
-            f"opt_{i}", False
-        )
-      if str_module.session_state.get(f"opt_{i}", False):
-        if str_module.button("🗑️", key=f"del_{i}"):
-          all_msgs.pop(i)
-          str_module.rerun()
-        if chat.get("msg") and str_module.button("✏️", key=f"ed_{i}"):
-          str_module.session_state.edit_idx = i
-          str_module.session_state.edit_val = chat["msg"]
-          str_module.session_state[f"opt_{i}"] = False
-          str_module.rerun()
+    if chat["name"] == str_module.session_state.my_name:
+        with col_options:
+            if str_module.button("⋮", key=f"menu_{i}"):
+                str_module.session_state[f"opt_{i}"] = not str_module.session_state.get(
+                    f"opt_{i}", False
+                )
+            if str_module.session_state.get(f"opt_{i}", False):
+                if str_module.button("🗑️", key=f"del_{i}"):
+                    all_msgs.pop(i)
+                    str_module.rerun()
+                if chat.get("msg") and str_module.button("✏️", key=f"ed_{i}"):
+                    str_module.session_state.edit_idx = i
+                    str_module.session_state.edit_val = chat["msg"]
+                    str_module.session_state[f"opt_{i}"] = False
+                    str_module.rerun()
 
 # --- واجهة التعديل ---
 if "edit_idx" in str_module.session_state:
-  str_module.divider()
-  new_txt = str_module.text_input(
-      "تعديل الرسالة:", value=str_module.session_state.edit_val
-  )
-  if str_module.button("حفظ ✅"):
-    all_msgs[str_module.session_state.edit_idx]["msg"] = new_txt
-    del str_module.session_state.edit_idx
-    str_module.rerun()
+    str_module.divider()
+    new_txt = str_module.text_input(
+        "تعديل الرسالة:", value=str_module.session_state.edit_val
+    )
+    if str_module.button("حفظ ✅"):
+        all_msgs[str_module.session_state.edit_idx]["msg"] = new_txt
+        del str_module.session_state.edit_idx
+        str_module.rerun()
 
 # إرسال نص جديد
 if prompt := str_module.chat_input("اكتبي رسالتج هنا..."):
-  now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
-  all_msgs.append({
-      "name": str_module.session_state.my_name,
-      "msg": prompt,
-      "img": None,
-      "time": now,
-      "seen": False,
-  })
-  str_module.rerun()
+    now = (datetime.now() + timedelta(hours=3)).strftime("%I:%M %p")
+    all_msgs.append({
+        "name": str_module.session_state.my_name,
+        "msg": prompt,
+        "img": None,
+        "time": now,
+        "seen": False,
+    })
+    str_module.rerun()
