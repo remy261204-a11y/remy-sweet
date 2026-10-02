@@ -3,8 +3,25 @@ from datetime import datetime, timedelta
 import streamlit as str_module
 from streamlit_autorefresh import st_autorefresh
 
-# 1. إعدادات الصفحة
-str_module.set_page_config(page_title="The Queen Remy 👑", page_icon="✨")
+# 1. إعدادات الصفحة والبحث عن الرسائل غير المقروءة لتحديث العنوان والإشعار
+# (نحدد عدد الرسائل غير المقروءة مبدئياً)
+if "last_seen_count" not in str_module.session_state:
+    str_module.session_state.last_seen_count = 0
+
+# 3. المخزن المشترك للرسائل النصية والملفات (تم نقله قبل إعداد الصفحة ليتم الاعتماد عليه)
+@str_module.cache_resource
+def get_global_messages():
+    return []
+
+all_msgs = get_global_messages()
+
+# حساب عدد الرسائل الواردة غير المقروءة من شخص آخر
+unread_others = [m for m in all_msgs if not m.get("seen", False) and m.get("name") != str_module.session_state.get("my_name", "")]
+unread_count = len(unread_others)
+
+# إعداد العنوان مع العداد إذا وجد
+page_title_text = f"({unread_count}) The Queen Remy 👑" if unread_count > 0 else "The Queen Remy 👑"
+str_module.set_page_config(page_title=page_title_text, page_icon="✨")
 st_autorefresh(interval=1000, key="datarefresh")
 
 # 2. التنسيقات (خلفية هادئة وتنسيق عرض الصور بالجودة الكاملة)
@@ -35,14 +52,18 @@ str_module.markdown(
     unsafe_allow_html=True,
 )
 
+# تشغيل صوت الإشعار إذا دخلت رسالة جديدة
+if unread_count > str_module.session_state.last_seen_count:
+    # كود HTML لتشغيل صوت تنبيه خفيف وبدون إزعاج
+    audio_html = """
+        <audio autoplay style="display:none;">
+            <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mp3">
+        </audio>
+    """
+    str_module.markdown(audio_html, unsafe_allow_html=True)
 
-# 3. المخزن المشترك للرسائل النصية والملفات
-@str_module.cache_resource
-def get_global_messages():
-    return []
+str_module.session_state.last_seen_count = unread_count
 
-
-all_msgs = get_global_messages()
 
 # --- تسجيل الدخول بالاسم فقط ---
 if "my_name" not in str_module.session_state:
@@ -89,6 +110,7 @@ str_module.sidebar.divider()
 
 if str_module.sidebar.button("حذف الكل 🗑️"):
     all_msgs.clear()
+    str_module.session_state.last_seen_count = 0
     str_module.rerun()
 if str_module.sidebar.button("خروج ⬅️"):
     del str_module.session_state.my_name
