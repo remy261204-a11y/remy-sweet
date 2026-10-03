@@ -157,7 +157,7 @@ for i, chat in enumerate(all_msgs):
             if str_module.session_state.get(f"opt_{i}", False):
                 if str_module.button("🗑️", key=f"del_{i}"):
                     all_msgs.pop(i)
-                    str_`module`.rerun() if 'str_`module`' in locals() else str_module.rerun()
+                    str_module.rerun()
                 if chat.get("msg") and str_module.button("✏️", key=f"ed_{i}"):
                     str_module.session_state.edit_idx = i
                     str_module.session_state.edit_val = chat["msg"]
