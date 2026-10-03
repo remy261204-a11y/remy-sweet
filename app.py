@@ -1,5 +1,7 @@
 import base64
 from datetime import datetime, timedelta
+import json
+import os
 import requests
 import streamlit as str_module
 from streamlit_autorefresh import st_autorefresh
@@ -7,6 +9,25 @@ from streamlit_autorefresh import st_autorefresh
 # 1. إعدادات الصفحة
 str_module.set_page_config(page_title="The Queen Remy 👑", page_icon="✨")
 st_autorefresh(interval=1000, key="datarefresh")
+
+# ملف حفظ الإعدادات بشكل دائمي
+CONFIG_FILE = "config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return {"bot_token": "", "target_chat_id": ""}
+
+def save_config(token, chat_id):
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump({"bot_token": token, "target_chat_id": chat_id}, f)
+    except:
+            pass
 
 # 2. التنسيقات
 str_module.markdown(
@@ -32,10 +53,15 @@ str_module.markdown(
     unsafe_allow_html=True,
 )
 
-# 3. المخزن المشترك للرسائل وإعدادات المقابل (هو يمليها بنفسه)
+# 3. المخزن المشترك للرسائل وقراءة الإعدادات المحفوظة
 @str_module.cache_resource
 def get_global_data():
-    return {"msgs": [], "bot_token": "", "target_chat_id": ""}
+    saved_cfg = load_config()
+    return {
+        "msgs": [], 
+        "bot_token": saved_cfg.get("bot_token", ""), 
+        "target_chat_id": saved_cfg.get("target_chat_id", "")
+    }
 
 data = get_global_data()
 all_msgs = data["msgs"]
@@ -50,7 +76,7 @@ if "my_name" not in str_module.session_state:
             str_module.rerun()
     str_module.stop()
 
-# --- القائمة الجانبية (الشخص المقابل هو اللي يضبط إعدادات التلگرام مالته هنا) ---
+# --- القائمة الجانبية (إعدادات التلگرام) ---
 str_module.sidebar.title("الملكة ريمي")
 str_module.sidebar.divider()
 
@@ -61,7 +87,8 @@ with str_module.sidebar.expander("⚙️ إعدادات إشعارات المق�
     if str_module.button("حفظ إعدادات التلگرام"):
         data["bot_token"] = token_input
         data["target_chat_id"] = id_input
-        str_module.sidebar.success("تم الحفظ!")
+        save_config(token_input, id_input)  # حفظ دائمي بالملف
+        str_module.sidebar.success("تم الحفظ بشكل دائمي!")
 
 str_module.sidebar.divider()
 
@@ -90,7 +117,7 @@ if uploaded_file is not None:
         }
         all_msgs.append(msg_item)
         
-        # إذا هو مخلّي البوت مالته، يوصله إشعار بالملف
+        # إرسال إشعار الملف لتليجرام
         if data["bot_token"] and data["target_chat_id"] and str_module.session_state.my_name != "المقابل":
             try:
                 requests.post(
@@ -186,7 +213,7 @@ if prompt := str_module.chat_input("اكتبي رسالتج هنا..."):
         "seen": False,
     })
     
-    # إذا هو مخلّي إعدادات التلگرام مالته، يوصله إشعار فوري بالنص
+    # إرسال إشعار فوري بالنص لتليجرام
     if data["bot_token"] and data["target_chat_id"]:
         try:
             requests.post(
